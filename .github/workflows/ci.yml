@@ -1,0 +1,51 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set workspace
+      run: echo "WORKSPACE=$(pwd)" >> $GITHUB_ENV
+
+    - name: Check if CMake is installed
+      id: check-cmake
+      run: |
+        if command -v cmake &> /dev/null; then
+          echo "installed=true" >> $GITHUB_OUTPUT
+          cmake --version
+        else
+          echo "installed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install CMake (if missing)
+      if: steps.check-cmake.outputs.installed == 'false'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake
+
+    - name: Configure CMake
+      run: cmake -S ${{ env.WORKSPACE }} -B ${{ env.WORKSPACE }}/build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTS=ON -DBUILD_BENCHMARKS=ON
+
+    - name: Build
+      run: cmake --build ${{ env.WORKSPACE }}/build --config ${{ matrix.build_type }} -j 2
+
+    - name: Create data directory
+      run: mkdir -p ${{ env.WORKSPACE }}/data
+
+    - name: Generate test log (1 MB)
+      run: python ${{ env.WORKSPACE }}/scripts/generate_logs.py --size-gb 0.001 --output ${{ env.WORKSPACE }}/data/test.log --seed 42
+
+    - name: Run log processor on test log
+      run: ${{ env.WORKSPACE }}/build/src/log_processor ${{ env.WORKSPACE }}/data/test.log
+
+    - name: Test
+      working-directory: ${{ env.WORKSPACE }}/build
+      run: ctest --output-on-failure
