@@ -1,6 +1,6 @@
 # Performance Report
 
-Generated: 2026-03-15 01:31 UTC
+Generated: 2026-03-15 01:55 UTC
 
 ## Branch: main
 
@@ -74,6 +74,26 @@ Generated: 2026-03-15 01:31 UTC
 
 ---
 
+## Branch: step2-thread-manual
+
+### 2026-03-15 01:52:00 (Windows)
+
+| Benchmark | real time | cpu time |
+|-----------|-----------|----------|
+| BM_ParseLine | 418.72 ns | 414.34 ns |
+| BM_Accumulate | 534.24 ns | 531.25 ns |
+| BM_ProcessFile/iterations:1/real_time | 12533.10 ms | 12500.00 ms |
+| BM_ReadFile/iterations:1/real_time | 3405.76 ms | 3390.62 ms |
+| BM_ProcessFileThreaded/iterations:1/real_time | 9949.52 ms | 4671.88 ms |
+
+**Context**  
+- CPUs: 16 @ 2895 MHz
+- Build type: release
+- Compiler: g++.exe (Rev8, Built by MSYS2 project) 15.2.0
+- Git commit: 44e11d260621c2d1b22764b0586d65d5e8781b16
+
+---
+
 ## Summary (latest runs)
 
 | Branch | Platform | Date | Benchmark | real time |
@@ -86,3 +106,8 @@ Generated: 2026-03-15 01:31 UTC
 | step1-sequential | Windows | 2026-03-15 | BM_Accumulate | 497.10 ns |
 | step1-sequential | Windows | 2026-03-15 | BM_ProcessFile/iterations:1/real_time | 13515.94 ms |
 | step1-sequential | Windows | 2026-03-15 | BM_ReadFile/iterations:1/real_time | 3333.12 ms |
+| step2-thread-manual | Windows | 2026-03-15 | BM_ParseLine | 418.72 ns |
+| step2-thread-manual | Windows | 2026-03-15 | BM_Accumulate | 534.24 ns |
+| step2-thread-manual | Windows | 2026-03-15 | BM_ProcessFile/iterations:1/real_time | 12533.10 ms |
+| step2-thread-manual | Windows | 2026-03-15 | BM_ReadFile/iterations:1/real_time | 3405.76 ms |
+| step2-thread-manual | Windows | 2026-03-15 | BM_ProcessFileThreaded/iterations:1/real_time | 9949.52 ms |
