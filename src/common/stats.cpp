@@ -56,7 +56,7 @@ void LogStats::print(const std::string& filename, double elapsed_sec) const
     for (int i = 0; i < std::min(10, static_cast<int>(urls.size())); ++i) {
         std::cout << "  " << std::setw(3) << (i + 1) << ".  "
                   << std::setw(40) << std::left << urls[i].first
-                  << "  —  " << urls[i].second << " hits\n";
+                  << "  -  " << urls[i].second << " hits\n";
     }
 
     // Timing
