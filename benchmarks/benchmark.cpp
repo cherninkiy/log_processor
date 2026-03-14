@@ -101,7 +101,8 @@ static void BM_ProcessFile(benchmark::State& state) {
         benchmark::DoNotOptimize(stats);
     }
 }
-BENCHMARK(BM_ProcessFile);
+// Загружает весь файл в память на каждой итерации — одна итерация достаточна для файлов >= 100 МБ
+BENCHMARK(BM_ProcessFile)->Iterations(1)->UseRealTime();
 
 // -----------------------------------------------------------------------------
 // Дополнительно: бенчмарк только чтения файла (без парсинга)
@@ -116,6 +117,7 @@ static void BM_ReadFile(benchmark::State& state) {
         benchmark::DoNotOptimize(lines.size());
     }
 }
-BENCHMARK(BM_ReadFile);
+// Загружает весь файл в память — одна итерация достаточна для файлов >= 100 МБ
+BENCHMARK(BM_ReadFile)->Iterations(1)->UseRealTime();
 
 BENCHMARK_MAIN();
