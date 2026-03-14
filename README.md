@@ -28,33 +28,38 @@
 log_processor/
 ├── README.md
 ├── CMakeLists.txt
-├── src/
-│   ├── main.cpp              # Точка входа, CLI-аргументы, вывод результата
-│   ├── reader/               # Модуль чтения файла
-│   │   ├── reader.h          # Интерфейс: синхронный и корутинный reader
+├── src/                      # Исходный код
+│   ├── main.cpp
+│   ├── reader/
+│   │   ├── reader.h
 │   │   └── reader.cpp
-│   ├── parser/               # Парсинг отдельной строки лога
-│   │   ├── parser.h          # struct LogEntry; ParseResult parse(std::string_view)
+│   ├── parser/
+│   │   ├── parser.h
 │   │   └── parser.cpp
-│   ├── analyzer/             # Агрегация: накопление и финальный подсчёт статистики
+│   ├── analyzer/
 │   │   ├── analyzer.h
 │   │   └── analyzer.cpp
-│   └── common/               # Общие утилиты
+│   └── common/
 │       ├── thread_pool.h     # Пул потоков (появляется в step4)
-│       └── timer.h           # RAII-таймер на std::chrono
-├── tests/
+│       └── timer.h           # RAII-таймер
+├── tests/                    # Модульные тесты (GTest)
 │   ├── CMakeLists.txt
-│   ├── test_parser.cpp       # Юнит-тесты парсера (корректные/битые строки)
-│   └── test_analyzer.cpp     # Тесты агрегации
-├── benchmarks/
-│   └── benchmark.cpp         # Google Benchmark: reader, parser, полный pipeline
-├── data/
-│   └── sample.log            # ~10 МБ — для быстрого тестирования
-├── results/                  # Генерируется при запуске, не в git
-│   └── performance_report.md
-└── scripts/
-    ├── generate_log.py       # Генератор синтетических логов заданного размера
-    └── plot_results.py       # Построение графиков по results/
+│   ├── test_parser.cpp
+│   ├── test_analyzer.cpp
+│   ├── test_reader.cpp
+│   └── test_stats.cpp
+├── benchmarks/               # Бенчмарки (Google Benchmark)
+│   ├── CMakeLists.txt
+│   └── benchmark.cpp         # Измеряет парсинг, агрегацию, чтение, полный pipeline
+├── data/                     # Тестовые данные (игнорируются git)
+│   └── sample.log            # ~10 МБ для быстрого тестирования
+├── results/                  # Результаты замеров (генерируются, не в git)
+│   └── performance_report.md # Сводный отчёт
+└── scripts/                  # Вспомогательные скрипты
+    ├── generate_logs.py      # Генератор синтетических логов заданного размера
+    ├── run_benchmarks.sh     # Запуск бенчмарков в Linux/WSL, сохранение результатов
+    ├── run_benchmarks.ps1    # Запуск бенчмарков в Windows
+    └── generate_report.py    # Построение отчёта по сохранённым результатам
 ```
 
 ---
@@ -179,26 +184,51 @@ cmake --build . -j
 ## Запуск
 
 ```bash
-# Обработка файла лога
-./log_processor /path/to/access.log
-
 # Генерация тестового файла (Python 3)
-python scripts/generate_log.py --size-gb 1 --output data/test_1gb.log
+python3 scripts/generate_logs.py --size-gb 1 --output data/test_1gb.log
 
-# Запуск бенчмарков
-./benchmarks/log_benchmark
+# Обработка файла лога (для Windows запускать с powershell ...)
+./build/${PLATFORM}/src/log_processor /path/to/access.log
 
-# Запуск тестов
-ctest --output-on-failure
+# Запуск бенчмарков (для Windows запускать с powershell ...)
+./build/${PLATFORM}/benchmarks/log_benchmark
+
+# Запуск тестов (для Windows запускать с powershell ...)
+ctest --test-dir ./build/${PLATFORM}/tests
+
+# Запуск бенчмарков с сохранением результатов (Linux/WSL)
+./scripts/run_benchmarks.sh
+
+# Запуск бенчмарков в Windows (PowerShell)
+.\scripts\run_benchmarks.ps1
+
+# Генерация сводного отчёта по всем сохранённым замерам
+python3 scripts/generate_report.py
+
 ```
 
 ---
 
 ## Производительность
 
-Замеры проводятся на каждой ветке. Результаты сохраняются в `results/stepN.txt` и включают:
-- Тестовую среду: CPU, RAM, ОС, версия компилятора, флаги оптимизации
-- Время обработки при 1, 2, 4, 8 потоках
-- Загрузку CPU (через `getrusage` или `perf`)
-- Throughput (МБ/с)
-- Подтверждение TSAN: нет гонок
+Замеры проводятся автоматически с помощью скриптов `run_benchmarks.sh` (Linux/WSL) и `run_benchmarks.ps1` (Windows). Каждый запуск сохраняет результаты в папку `results/<имя_ветки>/` в двух файлах:
+- `<timestamp>_benchmark.json` — результаты бенчмарков в формате JSON (Google Benchmark).
+- `<timestamp>_info.txt` — информация об окружении: ветка, дата, тестовый файл, версия компилятора, хэш коммита.
+
+После серии замеров на разных ветках можно сгенерировать сводный отчёт в формате Markdown:
+
+```bash
+python scripts/generate_report.py
+```
+
+Отчёт будет сохранён в `results/performance_report.md` и содержит таблицы со временем выполнения каждого бенчмарка для всех запусков, а также контекстную информацию.
+
+Включённые метрики:
+
+- Время обработки (реальное и процессорное) для каждого бенчмарка.
+
+- Тестовая среда: CPU, ОС, версия компилятора, флаги оптимизации (из `info.txt`).
+
+- Количество строк в тестовом файле и доля успешно распарсенных (из бенчмарка `BM_ProcessFile`).
+
+Кроме того, при необходимости можно запустить обработчик лога вручную и получить детальную статистику по файлу (количество уникальных IP, HTTP-коды, топ URL) — для этого в будущем будет добавлен флаг `--stats-json`.
