@@ -39,3 +39,27 @@
 
 # debug information files
 *.dwo
+
+# Compile commands
+compile_commands.json
+
+# Environment
+.env
+.vscode
+
+# Build directories
+build/
+cmake-build-*/
+
+# Generated test data
+data/*.log
+data/*.log.gz
+
+# Results
+results/*/
+
+# Developer Tools
+dev-tools/
+
+# Sonar Qube
+.scannerwork
