@@ -1,0 +1,5 @@
+# Логи для обработки. Не попадают в git (см. .gitignore).
+#
+# Для генерации тестового файла используй:
+#
+#   python scripts/generate_logs.py --size-gb 1 --output data/access.log
