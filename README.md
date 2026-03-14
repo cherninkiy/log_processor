@@ -131,7 +131,7 @@ Throughput:       137 MB/s
 
 | Ветка | Механизм | Ожидаемый результат |
 |---|---|---|
-| `step1-sequential` | Последовательное чтение, ручной парсинг (`string_view` + `from_chars`) | Baseline: ~5–8 сек на 1 ГБ |
+| `step1-sequential` | Последовательное чтение, ручной парсинг (`string_view` + `from_chars`) | Baseline: **13.5 сек** на 1 ГБ (Windows, однопоток) |
 | `step2-thread-manual` | `std::thread` + `std::mutex` для агрегации | Ускорение в ~4–6× на 8 ядрах |
 | `step3-atomic-fixes` | `std::atomic` + thread-local буферы, устранение false sharing | +20–40% к шагу 2 |
 | `step4-threadpool` | Пул потоков, очередь задач-чанков | Снижение накладных расходов, стабильная загрузка CPU |
@@ -148,7 +148,7 @@ Throughput:       137 MB/s
 - `analyzer.cpp`: `accumulate()` заполняет `status_codes`, `ip_counts`, `url_counts`, `total_bytes`
 - 5 unit-тестов для `parse_log_line()` — все проходят
 
-Baseline на 10 МБ (~71k строк): **~0.08 сек**, 0 ошибок парсинга.
+Baseline на 1 ГБ (7.1М строк, Windows, однопоток): **13.5 сек**, 0 ошибок парсинга. Для сравнения: вариант с `std::regex` — **40.9 сек** на том же файле.
 
 ### Шаг 2 — `step2-thread-manual`
 Файл делится на N примерно равных чанков (N = число ядер). Каждый чанк отдаётся отдельному `std::thread`. Главная задача: **правильно найти границу** — не разрезать строку пополам. Результаты каждого потока агрегируются через `std::mutex`. Проявляются первые проблемы: lock contention, false sharing.

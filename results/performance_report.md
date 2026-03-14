@@ -1,136 +1,76 @@
 # Performance Report
 
-Generated: 2026-03-13 10:56 UTC
+Generated: 2026-03-15 01:31 UTC
 
 ## Branch: main
 
-### 2026-03-13 10:55:46 (Windows)
+### 2026-03-15 01:22:06 (Windows)
 
 | Benchmark | real time | cpu time |
 |-----------|-----------|----------|
-| BM_ParseLine | 17.78 µs | 17.58 µs |
-| BM_Accumulate | 355.95 ns | 359.93 ns |
-| BM_ProcessFile | 1399.23 ms | 1390.62 ms |
-| BM_ReadFile | 44.39 ms | 44.92 ms |
-
-**Context**  
-- CPUs: 16 @ 2895 MHz
-- Build type: debug
-- Compiler: g++.exe (Rev8, Built by MSYS2 project) 15.2.0
-- Git commit: 4067090f290715417ffe53fded832ea8525c4937
-
----
-
-### 2026-03-13 10:29:34 (Linux)
-
-| Benchmark | real time | cpu time |
-|-----------|-----------|----------|
-| BM_ParseLine | 17.70 µs | 17.70 µs |
-| BM_Accumulate | 398.78 ns | 398.77 ns |
-| BM_ProcessFile | 1552.77 ms | 1383.04 ms |
-| BM_ReadFile | 221.68 ms | 50.14 ms |
-
-**Context**  
-- CPUs: 16 @ 2895 MHz
-- Build type: debug
-- Compiler: g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
-- Git commit: 4067090f290715417ffe53fded832ea8525c4937
-
----
-
-### 2026-03-03 15:00:02 (Windows)
-
-| Benchmark | real time | cpu time |
-|-----------|-----------|----------|
-| BM_ParseLine | 4.28 µs | 4.30 µs |
-| BM_Accumulate | 198.51 ns | 198.80 ns |
-| BM_ProcessFile | 381.07 ms | 382.81 ms |
-| BM_ReadFile | 33.17 ms | 32.81 ms |
+| BM_ParseLine | 4.26 µs | 4.20 µs |
+| BM_Accumulate | 567.74 ns | 565.01 ns |
+| BM_ProcessFile/iterations:1/real_time | 40905.48 ms | 40906.25 ms |
+| BM_ReadFile/iterations:1/real_time | 3401.58 ms | 3390.62 ms |
 
 **Context**  
 - CPUs: 16 @ 2895 MHz
 - Build type: release
 - Compiler: g++.exe (Rev8, Built by MSYS2 project) 15.2.0
-- Git commit: 4067090f290715417ffe53fded832ea8525c4937
+- Git commit: 10e49d4bda3dbe469136689da54b3229707c17ca
 
 ---
 
-### 2026-03-03 14:59:37 (Linux)
+### 2026-03-15 00:48:17 (Windows)
 
 | Benchmark | real time | cpu time |
 |-----------|-----------|----------|
-| BM_ParseLine | 3.83 µs | 3.83 µs |
-| BM_Accumulate | 176.90 ns | 176.90 ns |
-| BM_ProcessFile | 524.14 ms | 336.14 ms |
-| BM_ReadFile | 224.45 ms | 35.12 ms |
-
-**Context**  
-- CPUs: 16 @ 2895 MHz
-- Build type: release
-- Compiler: g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
-- Git commit: 4067090f290715417ffe53fded832ea8525c4937
-
----
-
-### 2026-03-03 14:45:06 (Linux)
-
-| Benchmark | real time | cpu time |
-|-----------|-----------|----------|
-| BM_ParseLine | 3.85 µs | 3.85 µs |
-| BM_Accumulate | 174.48 ns | 174.48 ns |
-| BM_ProcessFile | 509.92 ms | 331.74 ms |
-| BM_ReadFile | 215.64 ms | 33.14 ms |
-
-**Context**  
-- CPUs: 16 @ 2895 MHz
-- Build type: release
-- Compiler: g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
-- Git commit: 4067090f290715417ffe53fded832ea8525c4937
-
----
-
-### 2026-03-03 14:44:51 (Windows)
-
-| Benchmark | real time | cpu time |
-|-----------|-----------|----------|
-| BM_ParseLine | 4.48 µs | 4.52 µs |
-| BM_Accumulate | 201.34 ns | 199.50 ns |
-| BM_ProcessFile | 378.75 ms | 382.81 ms |
-| BM_ReadFile | 34.55 ms | 34.23 ms |
+| BM_ParseLine | 4.30 µs | 4.30 µs |
+| BM_Accumulate | 475.40 ns | 475.73 ns |
+| BM_ProcessFile | 41785.45 ms | 41781.25 ms |
+| BM_ReadFile | 3400.81 ms | 3375.00 ms |
 
 **Context**  
 - CPUs: 16 @ 2895 MHz
 - Build type: release
 - Compiler: g++.exe (Rev8, Built by MSYS2 project) 15.2.0
-- Git commit: 4067090f290715417ffe53fded832ea8525c4937
+- Git commit: b9f23efa72522cf80134a6c22bed4dbd7ec4f43e
 
 ---
 
-### 2026-03-03 14:02:05 (Windows)
+## Branch: step1-sequential
+
+### 2026-03-15 01:28:06 (Windows)
 
 | Benchmark | real time | cpu time |
 |-----------|-----------|----------|
-| BM_Placeholder | 2.34 ns | 2.30 ns |
+| BM_ParseLine | 413.73 ns | 414.34 ns |
+| BM_Accumulate | 497.10 ns | 500.00 ns |
+| BM_ProcessFile/iterations:1/real_time | 13515.94 ms | 13437.50 ms |
+| BM_ReadFile/iterations:1/real_time | 3333.12 ms | 3343.75 ms |
 
 **Context**  
 - CPUs: 16 @ 2895 MHz
-- Build type: debug
+- Build type: release
 - Compiler: g++.exe (Rev8, Built by MSYS2 project) 15.2.0
-- Git commit: 4067090f290715417ffe53fded832ea8525c4937
+- Git commit: 4c3daeb1484cac37f2a87055ba34601042af1aa2
 
 ---
 
-### 2026-03-03 14:00:53 (Linux)
+### 2026-03-15 00:52:36 (Windows)
 
 | Benchmark | real time | cpu time |
 |-----------|-----------|----------|
-| BM_Placeholder | 1.22 ns | 1.22 ns |
+| BM_ParseLine | 416.35 ns | 414.34 ns |
+| BM_Accumulate | 471.76 ns | 464.91 ns |
+| BM_ProcessFile | 16427.12 ms | 16234.38 ms |
+| BM_ReadFile | 3407.63 ms | 3390.62 ms |
 
 **Context**  
 - CPUs: 16 @ 2895 MHz
-- Build type: debug
-- Compiler: g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
-- Git commit: 4067090f290715417ffe53fded832ea8525c4937
+- Build type: release
+- Compiler: g++.exe (Rev8, Built by MSYS2 project) 15.2.0
+- Git commit: aa3ca9f79e88c9e6860fffc8f9cc54776bfcca1b
 
 ---
 
@@ -138,7 +78,11 @@ Generated: 2026-03-13 10:56 UTC
 
 | Branch | Platform | Date | Benchmark | real time |
 |--------|----------|------|-----------|-----------|
-| main | Windows | 2026-03-13 | BM_ParseLine | 17.78 µs |
-| main | Windows | 2026-03-13 | BM_Accumulate | 355.95 ns |
-| main | Windows | 2026-03-13 | BM_ProcessFile | 1399.23 ms |
-| main | Windows | 2026-03-13 | BM_ReadFile | 44.39 ms |
+| main | Windows | 2026-03-15 | BM_ParseLine | 4.26 µs |
+| main | Windows | 2026-03-15 | BM_Accumulate | 567.74 ns |
+| main | Windows | 2026-03-15 | BM_ProcessFile/iterations:1/real_time | 40905.48 ms |
+| main | Windows | 2026-03-15 | BM_ReadFile/iterations:1/real_time | 3401.58 ms |
+| step1-sequential | Windows | 2026-03-15 | BM_ParseLine | 413.73 ns |
+| step1-sequential | Windows | 2026-03-15 | BM_Accumulate | 497.10 ns |
+| step1-sequential | Windows | 2026-03-15 | BM_ProcessFile/iterations:1/real_time | 13515.94 ms |
+| step1-sequential | Windows | 2026-03-15 | BM_ReadFile/iterations:1/real_time | 3333.12 ms |
