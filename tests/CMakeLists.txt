@@ -71,6 +71,7 @@ add_gtest(test_parser test_parser.cpp)
 add_gtest(test_analyzer test_analyzer.cpp)
 add_gtest(test_reader test_reader.cpp)
 add_gtest(test_stats test_stats.cpp)
+add_gtest(test_threading test_threading.cpp)
 
 # Если нужно больше тестов, добавляйте их так же
 # add_gtest(test_something test_something.cpp)

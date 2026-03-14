@@ -4,10 +4,13 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <mutex>
+#include <thread>
 
 #include "reader/reader.h"
 #include "parser/parser.h"
 #include "analyzer/analyzer.h"
+#include "common/scheduler.h"
 #include "common/stats.h"
 
 // -----------------------------------------------------------------------------
@@ -119,5 +122,42 @@ static void BM_ReadFile(benchmark::State& state) {
 }
 // Загружает весь файл в память — одна итерация достаточна для файлов >= 100 МБ
 BENCHMARK(BM_ReadFile)->Iterations(1)->UseRealTime();
+
+// -----------------------------------------------------------------------------
+// Бенчмарк: многопоточная обработка файла (step2 — N потоков, mutex merge)
+// Использует hardware_concurrency потоков
+// -----------------------------------------------------------------------------
+static void BM_ProcessFileThreaded(benchmark::State& state) {
+    const char* filename = std::getenv("TEST_LOG_FILE");
+    if (!filename) filename = "data/sample.log";
+
+    const size_t n_threads = static_cast<size_t>(std::thread::hardware_concurrency());
+
+    for (auto _ : state) {
+        LogReader reader(filename);
+        const auto lines = reader.readAllLines();
+
+        LogStats   global_stats;
+        std::mutex stats_mutex;
+
+        parallel_for(lines.size(), n_threads, [&](size_t start, size_t end) {
+            LogStats local;
+            for (size_t i = start; i < end; ++i) {
+                local.total_lines++;
+                if (auto entry = parse_log_line(lines[i])) {
+                    local.parsed_ok++;
+                    accumulate(local, *entry);
+                } else {
+                    local.parse_errors++;
+                }
+            }
+            std::lock_guard<std::mutex> lock(stats_mutex);
+            global_stats.merge(local);
+        });
+
+        benchmark::DoNotOptimize(global_stats);
+    }
+}
+BENCHMARK(BM_ProcessFileThreaded)->Iterations(1)->UseRealTime();
 
 BENCHMARK_MAIN();
