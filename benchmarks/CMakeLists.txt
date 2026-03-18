@@ -51,6 +51,15 @@ target_link_libraries(log_benchmark
     analyzer_lib
 )
 
+# Если TBB найден — линкуем и включаем бенчмарк с concurrent_hash_map
+if(TBB_FOUND)
+    target_link_libraries(log_benchmark PRIVATE TBB::tbb)
+    target_compile_definitions(log_benchmark PRIVATE HAVE_TBB)
+    message(STATUS "log_benchmark: TBB enabled (BM_ProcessFileConcurrentTBB active)")
+else()
+    message(STATUS "log_benchmark: TBB not found (BM_ProcessFileConcurrentTBB skipped)")
+endif()
+
 # Если санитайзеры были включены, добавляем их к нашему бенчмарку
 if(CMAKE_CXX_FLAGS_BACKUP MATCHES "-fsanitize=")
     # Разбиваем строку флагов на отдельные аргументы

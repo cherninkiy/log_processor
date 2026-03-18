@@ -193,6 +193,39 @@ static void BM_ProcessFileAtomicLocal(benchmark::State& state) {
 }
 BENCHMARK(BM_ProcessFileAtomicLocal)->Iterations(1)->UseRealTime();
 
+#ifdef HAVE_TBB
+// -----------------------------------------------------------------------------
+// Бенчмарк: TBB concurrent_hash_map (без thread-local, без mutex в hot path)
+// Каждый поток пишет напрямую в единственную ConcurrentStats через accessor
+// (RAII-lock на один бакет). Нет финального слияния — но есть fine-grained
+// locking при каждой вставке/обновлении ключа.
+// -----------------------------------------------------------------------------
+static void BM_ProcessFileConcurrentTBB(benchmark::State& state) {
+    const size_t n_threads = static_cast<size_t>(std::thread::hardware_concurrency());
+
+    for (auto _ : state) {
+        LogReader reader(g_test_file);
+        const auto lines = reader.readAllLines();
+
+        ConcurrentStats cs;
+
+        parallel_for(lines.size(), n_threads, [&](size_t start, size_t end) {
+            for (size_t i = start; i < end; ++i) {
+                if (auto entry = parse_log_line(lines[i])) {
+                    cs.add_entry(*entry, entry->bytes);
+                } else {
+                    cs.add_error();
+                }
+            }
+        });
+
+        auto result = cs.to_log_stats();
+        benchmark::DoNotOptimize(result);
+    }
+}
+BENCHMARK(BM_ProcessFileConcurrentTBB)->Iterations(1)->UseRealTime();
+#endif  // HAVE_TBB
+
 // Кастомный main: извлекает --test_file=<path> из argv до передачи оставшихся
 // -----------------------------------------------------------------------------
 // Бенчмарк: TBB concurrent_hash_map (без thread-local, без mutex в hot path)

@@ -1,6 +1,6 @@
 # Performance Report
 
-Generated: 2026-03-15 01:55 UTC
+Generated: 2026-03-18 23:32 UTC
 
 ## Branch: main
 
@@ -76,6 +76,24 @@ Generated: 2026-03-15 01:55 UTC
 
 ## Branch: step2-thread-manual
 
+### 2026-03-15 02:04:20 (Windows)
+
+| Benchmark | real time | cpu time |
+|-----------|-----------|----------|
+| BM_ParseLine | 410.17 ns | 408.06 ns |
+| BM_Accumulate | 504.16 ns | 515.62 ns |
+| BM_ProcessFile/iterations:1/real_time | 13278.92 ms | 13281.25 ms |
+| BM_ReadFile/iterations:1/real_time | 3386.88 ms | 3390.62 ms |
+| BM_ProcessFileThreaded/iterations:1/real_time | 10530.68 ms | 5015.62 ms |
+
+**Context**  
+- CPUs: 16 @ 2895 MHz
+- Build type: release
+- Compiler: g++.exe (Rev8, Built by MSYS2 project) 15.2.0
+- Git commit: 44e11d260621c2d1b22764b0586d65d5e8781b16
+
+---
+
 ### 2026-03-15 01:52:00 (Windows)
 
 | Benchmark | real time | cpu time |
@@ -94,6 +112,103 @@ Generated: 2026-03-15 01:55 UTC
 
 ---
 
+## Branch: step3-atomic-fixes
+
+### 2026-03-18 23:29:02 (Linux)
+
+| Benchmark | real time | cpu time |
+|-----------|-----------|----------|
+| BM_ParseLine | 187.78 ns | 202.84 ns |
+| BM_Accumulate | 505.41 ns | 545.91 ns |
+| BM_ProcessFile/iterations:1/real_time | 36215.87 ms | 14334.06 ms |
+| BM_ReadFile/iterations:1/real_time | 27291.39 ms | 5258.09 ms |
+| BM_ProcessFileThreaded/iterations:1/real_time | 29572.82 ms | 4485.14 ms |
+| BM_ProcessFileAtomicLocal/iterations:1/real_time | 30201.98 ms | 12703.33 ms |
+
+**Context**  
+- CPUs: 16 @ 2895 MHz
+- Build type: release
+- Compiler: g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
+- Git commit: 62196eac5ff382ec926f386c0d6a27b2f4d6188d
+
+---
+
+### 2026-03-18 23:20:48 (Windows)
+
+| Benchmark | real time | cpu time |
+|-----------|-----------|----------|
+| BM_ParseLine | 409.27 ns | 408.06 ns |
+| BM_Accumulate | 499.22 ns | 500.00 ns |
+| BM_ProcessFile/iterations:1/real_time | 13696.86 ms | 13687.50 ms |
+| BM_ReadFile/iterations:1/real_time | 3488.90 ms | 3500.00 ms |
+| BM_ProcessFileThreaded/iterations:1/real_time | 11255.70 ms | 5250.00 ms |
+| BM_ProcessFileAtomicLocal/iterations:1/real_time | 12622.70 ms | 11765.62 ms |
+
+**Context**  
+- CPUs: 16 @ 2895 MHz
+- Build type: release
+- Compiler: g++.exe (Rev8, Built by MSYS2 project) 15.2.0
+- Git commit: 62196eac5ff382ec926f386c0d6a27b2f4d6188d
+
+---
+
+### 2026-03-18 23:10:05 (Windows)
+
+| Benchmark | real time | cpu time |
+|-----------|-----------|----------|
+| BM_ParseLine | 406.62 ns | 408.06 ns |
+| BM_Accumulate | 477.25 ns | 475.73 ns |
+| BM_ProcessFile/iterations:1/real_time | 13324.06 ms | 13328.12 ms |
+| BM_ReadFile/iterations:1/real_time | 4180.36 ms | 4109.38 ms |
+| BM_ProcessFileThreaded/iterations:1/real_time | 10603.13 ms | 4984.38 ms |
+| BM_ProcessFileAtomicLocal/iterations:1/real_time | 12386.55 ms | 11578.12 ms |
+
+**Context**  
+- CPUs: 16 @ 2895 MHz
+- Build type: release
+- Compiler: g++.exe (Rev8, Built by MSYS2 project) 15.2.0
+- Git commit: 62196eac5ff382ec926f386c0d6a27b2f4d6188d
+
+---
+
+### 2026-03-18 23:01:08 (Linux)
+
+| Benchmark | real time | cpu time |
+|-----------|-----------|----------|
+| BM_ParseLine | 2.10 µs | 2.32 µs |
+| BM_Accumulate | 930.24 ns | 1.03 µs |
+| BM_ProcessFile/iterations:1/real_time | 57934.99 ms | 40423.07 ms |
+| BM_ReadFile/iterations:1/real_time | 28014.28 ms | 7243.03 ms |
+| BM_ProcessFileThreaded/iterations:1/real_time | 38004.95 ms | 6601.27 ms |
+| BM_ProcessFileAtomicLocal/iterations:1/real_time | 41205.80 ms | 17940.93 ms |
+
+**Context**  
+- CPUs: 16 @ 2895 MHz
+- Build type: debug
+- Compiler: g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
+- Git commit: 62196eac5ff382ec926f386c0d6a27b2f4d6188d
+
+---
+
+### 2026-03-18 22:38:37 (Windows)
+
+| Benchmark | real time | cpu time |
+|-----------|-----------|----------|
+| BM_ParseLine | 416.02 ns | 417.13 ns |
+| BM_Accumulate | 503.05 ns | 500.00 ns |
+| BM_ProcessFile/iterations:1/real_time | 12644.74 ms | 12609.38 ms |
+| BM_ReadFile/iterations:1/real_time | 3394.63 ms | 3390.62 ms |
+| BM_ProcessFileThreaded/iterations:1/real_time | 11364.61 ms | 5531.25 ms |
+| BM_ProcessFileAtomicLocal/iterations:1/real_time | 14644.16 ms | 13484.38 ms |
+
+**Context**  
+- CPUs: 16 @ 2895 MHz
+- Build type: release
+- Compiler: g++.exe (Rev8, Built by MSYS2 project) 15.2.0
+- Git commit: 62196eac5ff382ec926f386c0d6a27b2f4d6188d
+
+---
+
 ## Summary (latest runs)
 
 | Branch | Platform | Date | Benchmark | real time |
@@ -106,8 +221,14 @@ Generated: 2026-03-15 01:55 UTC
 | step1-sequential | Windows | 2026-03-15 | BM_Accumulate | 497.10 ns |
 | step1-sequential | Windows | 2026-03-15 | BM_ProcessFile/iterations:1/real_time | 13515.94 ms |
 | step1-sequential | Windows | 2026-03-15 | BM_ReadFile/iterations:1/real_time | 3333.12 ms |
-| step2-thread-manual | Windows | 2026-03-15 | BM_ParseLine | 418.72 ns |
-| step2-thread-manual | Windows | 2026-03-15 | BM_Accumulate | 534.24 ns |
-| step2-thread-manual | Windows | 2026-03-15 | BM_ProcessFile/iterations:1/real_time | 12533.10 ms |
-| step2-thread-manual | Windows | 2026-03-15 | BM_ReadFile/iterations:1/real_time | 3405.76 ms |
-| step2-thread-manual | Windows | 2026-03-15 | BM_ProcessFileThreaded/iterations:1/real_time | 9949.52 ms |
+| step2-thread-manual | Windows | 2026-03-15 | BM_ParseLine | 410.17 ns |
+| step2-thread-manual | Windows | 2026-03-15 | BM_Accumulate | 504.16 ns |
+| step2-thread-manual | Windows | 2026-03-15 | BM_ProcessFile/iterations:1/real_time | 13278.92 ms |
+| step2-thread-manual | Windows | 2026-03-15 | BM_ReadFile/iterations:1/real_time | 3386.88 ms |
+| step2-thread-manual | Windows | 2026-03-15 | BM_ProcessFileThreaded/iterations:1/real_time | 10530.68 ms |
+| step3-atomic-fixes | Linux | 2026-03-18 | BM_ParseLine | 187.78 ns |
+| step3-atomic-fixes | Linux | 2026-03-18 | BM_Accumulate | 505.41 ns |
+| step3-atomic-fixes | Linux | 2026-03-18 | BM_ProcessFile/iterations:1/real_time | 36215.87 ms |
+| step3-atomic-fixes | Linux | 2026-03-18 | BM_ReadFile/iterations:1/real_time | 27291.39 ms |
+| step3-atomic-fixes | Linux | 2026-03-18 | BM_ProcessFileThreaded/iterations:1/real_time | 29572.82 ms |
+| step3-atomic-fixes | Linux | 2026-03-18 | BM_ProcessFileAtomicLocal/iterations:1/real_time | 30201.98 ms |
