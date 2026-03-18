@@ -43,16 +43,17 @@ log_processor/
 │   └── common/
 │       ├── stats.h           # LogStats — структура агрегированной статистики
 │       ├── stats.cpp
-│       ├── scheduler.h       # parallel_for / parallel_for_indexed (появляется в step2)
-│       ├── concurrent_stats.h # TBB concurrent_hash_map вариант (появляется в step3)
-│       ├── thread_pool.h     # Пул потоков (появляется в step4)
+│       ├── scheduler.h       # parallel_for / parallel_for_indexed
+│       ├── concurrent_stats.h # TBB concurrent_hash_map вариант (для сравнения)
 │       └── timer.h           # RAII-таймер
 ├── tests/                    # Модульные тесты (GTest)
 │   ├── CMakeLists.txt
 │   ├── test_parser.cpp
 │   ├── test_analyzer.cpp
 │   ├── test_reader.cpp
-│   └── test_stats.cpp
+│   ├── test_stats.cpp
+│   ├── test_threading.cpp    # Параллельная корректность (step2+)
+│   └── test_atomics.cpp      # thread-local слоты, false sharing, merge (step3+)
 ├── benchmarks/               # Бенчмарки (Google Benchmark)
 │   ├── CMakeLists.txt
 │   └── benchmark.cpp         # Измеряет парсинг, агрегацию, чтение, полный pipeline
