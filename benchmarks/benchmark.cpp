@@ -4,6 +4,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <string_view>
 #include <mutex>
 #include <thread>
 
@@ -12,6 +13,14 @@
 #include "analyzer/analyzer.h"
 #include "common/scheduler.h"
 #include "common/stats.h"
+#ifdef HAVE_TBB
+#  include "common/concurrent_stats.h"
+#endif
+
+// Путь к тестовому файлу — задаётся через --test_file=<path> (см. main),
+// при отсутствии аргумента берётся из переменной окружения TEST_LOG_FILE,
+// иначе — data/sample.log.
+static std::string g_test_file;
 
 // -----------------------------------------------------------------------------
 // Глобальные данные для бенчмарков (загружаются один раз)
@@ -20,16 +29,13 @@ static std::vector<std::string> testLines;        // строки из тест�
 static std::vector<LogEntry> testEntries;         // распарсенные записи (для бенчмарков агрегации)
 static bool dataLoaded = false;
 
-// Загружает строки из файла (путь жёстко задан или берётся из переменной окружения)
+// Загружает строки из файла (путь задан в g_test_file к моменту первого вызова)
 static void LoadTestData() {
     if (dataLoaded) return;
 
-    const char* filename = std::getenv("TEST_LOG_FILE");
-    if (!filename) filename = "data/sample.log";   // запасной вариант
-
-    std::ifstream file(filename);
+    std::ifstream file(g_test_file);
     if (!file.is_open()) {
-        std::cerr << "ERROR: Cannot open test file " << filename << "\n";
+        std::cerr << "ERROR: Cannot open test file " << g_test_file << "\n";
         std::exit(1);
     }
 
@@ -42,7 +48,7 @@ static void LoadTestData() {
     }
     dataLoaded = true;
     std::cout << "Loaded " << testLines.size() << " lines, "
-              << testEntries.size() << " parsed entries from " << filename << "\n";
+              << testEntries.size() << " parsed entries from " << g_test_file << "\n";
 }
 
 // -----------------------------------------------------------------------------
@@ -83,12 +89,9 @@ BENCHMARK(BM_Accumulate);
 // Использует небольшой файл (sample.log) и измеряет реальное время.
 // -----------------------------------------------------------------------------
 static void BM_ProcessFile(benchmark::State& state) {
-    const char* filename = std::getenv("TEST_LOG_FILE");
-    if (!filename) filename = "data/sample.log";
-
     for (auto _ : state) {
         // Полностью воспроизводим логику main.cpp (для step1)
-        LogReader reader(filename);
+        LogReader reader(g_test_file);
         auto lines = reader.readAllLines();          // читает весь файл в память
 
         LogStats stats;
@@ -111,11 +114,8 @@ BENCHMARK(BM_ProcessFile)->Iterations(1)->UseRealTime();
 // Дополнительно: бенчмарк только чтения файла (без парсинга)
 // -----------------------------------------------------------------------------
 static void BM_ReadFile(benchmark::State& state) {
-    const char* filename = std::getenv("TEST_LOG_FILE");
-    if (!filename) filename = "data/sample.log";
-
     for (auto _ : state) {
-        LogReader reader(filename);
+        LogReader reader(g_test_file);
         auto lines = reader.readAllLines();
         benchmark::DoNotOptimize(lines.size());
     }
@@ -128,13 +128,10 @@ BENCHMARK(BM_ReadFile)->Iterations(1)->UseRealTime();
 // Использует hardware_concurrency потоков
 // -----------------------------------------------------------------------------
 static void BM_ProcessFileThreaded(benchmark::State& state) {
-    const char* filename = std::getenv("TEST_LOG_FILE");
-    if (!filename) filename = "data/sample.log";
-
     const size_t n_threads = static_cast<size_t>(std::thread::hardware_concurrency());
 
     for (auto _ : state) {
-        LogReader reader(filename);
+        LogReader reader(g_test_file);
         const auto lines = reader.readAllLines();
 
         LogStats   global_stats;
@@ -160,4 +157,100 @@ static void BM_ProcessFileThreaded(benchmark::State& state) {
 }
 BENCHMARK(BM_ProcessFileThreaded)->Iterations(1)->UseRealTime();
 
-BENCHMARK_MAIN();
+// -----------------------------------------------------------------------------
+// Бенчмарк: многопоточная обработка файла (step3 — thread-local слоты, нет mutex)
+// Каждый поток пишет в свой alignas(64) слот, слияние после join в главном потоке.
+// -----------------------------------------------------------------------------
+static void BM_ProcessFileAtomicLocal(benchmark::State& state) {
+    const size_t n_threads = static_cast<size_t>(std::thread::hardware_concurrency());
+
+    struct alignas(64) ThreadSlot { LogStats stats; };
+
+    for (auto _ : state) {
+        LogReader reader(g_test_file);
+        const auto lines = reader.readAllLines();
+
+        std::vector<ThreadSlot> slots(n_threads);
+
+        parallel_for_indexed(lines.size(), n_threads, [&](size_t start, size_t end, size_t tid) {
+            LogStats& local = slots[tid].stats;
+            for (size_t i = start; i < end; ++i) {
+                local.total_lines++;
+                if (auto entry = parse_log_line(lines[i])) {
+                    local.parsed_ok++;
+                    accumulate(local, *entry);
+                } else {
+                    local.parse_errors++;
+                }
+            }
+        });
+
+        LogStats global_stats;
+        for (auto& slot : slots) global_stats.merge(slot.stats);
+
+        benchmark::DoNotOptimize(global_stats);
+    }
+}
+BENCHMARK(BM_ProcessFileAtomicLocal)->Iterations(1)->UseRealTime();
+
+// Кастомный main: извлекает --test_file=<path> из argv до передачи оставшихся
+// -----------------------------------------------------------------------------
+// Бенчмарк: TBB concurrent_hash_map (без thread-local, без mutex в hot path)
+// Каждый поток пишет напрямую в единственную ConcurrentStats через accessor
+// (RAII-lock на один бакет). Нет финального слияния — но есть fine-grained
+// locking при каждой вставке/обновлении ключа.
+// -----------------------------------------------------------------------------
+static void BM_ProcessFileConcurrentTBB(benchmark::State& state) {
+    const size_t n_threads = static_cast<size_t>(std::thread::hardware_concurrency());
+
+    for (auto _ : state) {
+        LogReader reader(g_test_file);
+        const auto lines = reader.readAllLines();
+
+        ConcurrentStats cs;
+
+        parallel_for(lines.size(), n_threads, [&](size_t start, size_t end) {
+            for (size_t i = start; i < end; ++i) {
+                if (auto entry = parse_log_line(lines[i])) {
+                    cs.add_entry(*entry, entry->bytes);
+                } else {
+                    cs.add_error();
+                }
+            }
+        });
+
+        auto result = cs.to_log_stats();
+        benchmark::DoNotOptimize(result);
+    }
+}
+BENCHMARK(BM_ProcessFileConcurrentTBB)->Iterations(1)->UseRealTime();
+// Кастомный main: извлекает --test_file=<path> из argv до передачи оставшихся
+// аргументов в Google Benchmark. Это позволяет запускать бенчмарк как:
+//   log_benchmark --test_file=data/access.log --benchmark_filter=BM_ProcessFile
+int main(int argc, char** argv) {
+    // Разбираем --test_file= вручную и убираем его из argv
+    std::vector<char*> filtered;
+    filtered.reserve(argc);
+    for (int i = 0; i < argc; ++i) {
+        std::string_view arg = argv[i];
+        if (arg.starts_with("--test_file=")) {
+            g_test_file = std::string(arg.substr(12));
+        } else {
+            filtered.push_back(argv[i]);
+        }
+    }
+    // Резервный вариант: переменная окружения или дефолтный путь
+    if (g_test_file.empty()) {
+        if (const char* env = std::getenv("TEST_LOG_FILE"))
+            g_test_file = env;
+        else
+            g_test_file = "data/sample.log";
+    }
+
+    int new_argc = static_cast<int>(filtered.size());
+    ::benchmark::Initialize(&new_argc, filtered.data());
+    if (::benchmark::ReportUnrecognizedArguments(new_argc, filtered.data())) return 1;
+    ::benchmark::RunSpecifiedBenchmarks();
+    ::benchmark::Shutdown();
+    return 0;
+}

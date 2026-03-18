@@ -11,8 +11,23 @@ TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
 OUTDIR="results/$BRANCH"
 mkdir -p "$OUTDIR"
 
-# Путь к тестовому файлу (можно переопределить через переменную окружения)
-TEST_FILE=${TEST_LOG_FILE:-data/sample.log}
+# Разбор аргументов командной строки
+TEST_FILE=""
+BUILD_TYPE="release"
+for arg in "$@"; do
+    case "$arg" in
+        --test-file=*) TEST_FILE="${arg#*=}" ;;
+        --build-type=*) BUILD_TYPE="${arg#*=}" ;;
+        -*) echo "Unknown option: $arg"; exit 1 ;;
+        *)  [ -z "$TEST_FILE" ] && TEST_FILE="$arg" ;;
+    esac
+done
+
+# Запасной вариант: переменная окружения или файл по умолчанию
+TEST_FILE="${TEST_FILE:-${TEST_LOG_FILE:-data/access.log}}"
+
+OS_TAG=$(uname -s | tr '[:upper:]' '[:lower:]')
+FILENAME="${TIMESTAMP}_${OS_TAG}_${BUILD_TYPE}"
 if [ ! -f "$TEST_FILE" ]; then
     echo "❌ Test file $TEST_FILE not found. Run generate_logs.py first."
     exit 1
@@ -29,6 +44,8 @@ fi
 {
     echo "Branch: $BRANCH"
     echo "Timestamp: $TIMESTAMP"
+    echo "OS: $OS_TAG"
+    echo "Build type: $BUILD_TYPE"
     echo "Test file: $TEST_FILE"
     echo "--- System ---"
     uname -a
@@ -36,14 +53,14 @@ fi
     ${CXX:-g++} --version | head -n 1
     echo "--- Git commit ---"
     git rev-parse HEAD
-} > "$OUTDIR/${TIMESTAMP}_info.txt"
+} > "$OUTDIR/${FILENAME}_info.txt"
 
 # Запускаем бенчмарки с сохранением в JSON
 echo "🚀 Running benchmarks..."
-export TEST_LOG_FILE="$TEST_FILE"
 "$BENCHMARK_EXE" \
+    --test_file="$TEST_FILE" \
     --benchmark_format=json \
-    --benchmark_out="$OUTDIR/${TIMESTAMP}_benchmark.json"
+    --benchmark_out="$OUTDIR/${FILENAME}_benchmark.json"
 
-echo "✅ Results saved to $OUTDIR/${TIMESTAMP}_benchmark.json"
-echo "   System info saved to $OUTDIR/${TIMESTAMP}_info.txt"
+echo "✅ Results saved to $OUTDIR/${FILENAME}_benchmark.json"
+echo "   System info saved to $OUTDIR/${FILENAME}_info.txt"

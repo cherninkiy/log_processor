@@ -1,6 +1,7 @@
 #!/usr/bin/env pwsh
 param(
     [string]$TestFile = "",
+    [string]$BuildType = "release",
     [switch]$NoBuild
 )
 
@@ -19,7 +20,10 @@ if (-not $branch) {
     $branch = "unknown"
 }
 
-$timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+$timestamp     = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+$osTag         = "windows"
+$buildTypeLower = $BuildType.ToLower()
+$filename      = "${timestamp}_${osTag}_${buildTypeLower}"
 $outDir = "results\$branch"
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
@@ -29,7 +33,7 @@ if ($TestFile) {
 } elseif ($env:TEST_LOG_FILE) {
     $testFile = $env:TEST_LOG_FILE
 } else {
-    $testFile = "data\sample.log"
+    $testFile = "data\access.log"
 }
 
 if (-not (Test-Path $testFile)) {
@@ -53,10 +57,12 @@ if (-not (Test-Path $benchmarkExe)) {
 }
 
 # Сохраняем информацию о системе
-$infoFile = "$outDir\${timestamp}_info.txt"
+$infoFile = "$outDir\${filename}_info.txt"
 @"
 Branch: $branch
 Timestamp: $timestamp
+OS: $osTag
+Build type: $BuildType
 Test file: $testFile
 --- System ---
 OS: $([Environment]::OSVersion)
@@ -83,10 +89,10 @@ if ($commit) {
 }
 
 Write-Host "🚀 Running benchmarks..." -ForegroundColor Green
-$env:TEST_LOG_FILE = $testFile
 $benchmarkArgs = @(
+    "--test_file=$testFile",
     "--benchmark_format=json",
-    "--benchmark_out=$outDir\${timestamp}_benchmark.json"
+    "--benchmark_out=$outDir\${filename}_benchmark.json"
 )
 
 & $benchmarkExe $benchmarkArgs
@@ -95,5 +101,5 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-Write-Host "✅ Results saved to $outDir\${timestamp}_benchmark.json" -ForegroundColor Green
+Write-Host "✅ Results saved to $outDir\${filename}_benchmark.json" -ForegroundColor Green
 Write-Host "   System info saved to $infoFile" -ForegroundColor Green

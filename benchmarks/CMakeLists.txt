@@ -45,7 +45,6 @@ add_executable(log_benchmark benchmark.cpp)
 target_link_libraries(log_benchmark 
     PRIVATE
     benchmark::benchmark
-    benchmark::benchmark_main
     common_lib
     reader_lib
     parser_lib
