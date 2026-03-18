@@ -30,9 +30,12 @@ int main(int argc, char* argv[]) {
 
     Timer timer;
 
-    // Шаг 1: читаем весь файл в память (reader не менялся)
+    // Шаг 1: читаем весь файл одним блоком (один системный вызов read()),
+    // затем расщепляем на string_view без аллокации std::string на каждую строку.
+    // Это устраняет ~7 млн аллокаций при обработке 1 ГБ access.log.
     LogReader reader(filename);
-    const auto lines = reader.readAllLines();
+    auto buf = reader.readRawBuffer();
+    const auto lines = LogReader::getLineViews(buf);
     const size_t total = lines.size();
 
     // Шаг 2: параллельный парсинг и агрегация без мьютекса.

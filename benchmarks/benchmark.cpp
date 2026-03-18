@@ -226,37 +226,58 @@ static void BM_ProcessFileConcurrentTBB(benchmark::State& state) {
 BENCHMARK(BM_ProcessFileConcurrentTBB)->Iterations(1)->UseRealTime();
 #endif  // HAVE_TBB
 
-// Кастомный main: извлекает --test_file=<path> из argv до передачи оставшихся
 // -----------------------------------------------------------------------------
-// Бенчмарк: TBB concurrent_hash_map (без thread-local, без mutex в hot path)
-// Каждый поток пишет напрямую в единственную ConcurrentStats через accessor
-// (RAII-lock на один бакет). Нет финального слияния — но есть fine-grained
-// locking при каждой вставке/обновлении ключа.
+// Бенчмарк: чтение файла одним блоком (без аллокации строк)
+// Сравнивает стоимость readRawBuffer() vs readAllLines()
 // -----------------------------------------------------------------------------
-static void BM_ProcessFileConcurrentTBB(benchmark::State& state) {
+static void BM_ReadFileRaw(benchmark::State& state) {
+    for (auto _ : state) {
+        LogReader reader(g_test_file);
+        auto buf = reader.readRawBuffer();
+        benchmark::DoNotOptimize(buf.size());
+    }
+}
+BENCHMARK(BM_ReadFileRaw)->Iterations(1)->UseRealTime();
+
+// -----------------------------------------------------------------------------
+// Бенчмарк: many-thread обработка через chunked-reader (step3+)
+// readRawBuffer()  — одно большое чтение вместо 7M std::string::operator=
+// getLineViews()   — zero-copy сплит по '\n', string_view в буфер
+// parse_log_line() — string_view API (нет лишних аллокаций в парсере)
+// ThreadSlot+alignas(64) — нет false sharing, нет мьютекса в hot path
+// -----------------------------------------------------------------------------
+static void BM_ProcessFileChunked(benchmark::State& state) {
     const size_t n_threads = static_cast<size_t>(std::thread::hardware_concurrency());
+
+    struct alignas(64) ThreadSlot { LogStats stats; };
 
     for (auto _ : state) {
         LogReader reader(g_test_file);
-        const auto lines = reader.readAllLines();
+        auto buf   = reader.readRawBuffer();               // один системный вызов read()
+        auto lines = LogReader::getLineViews(buf);         // O(n) сплит без аллокаций строк
 
-        ConcurrentStats cs;
+        std::vector<ThreadSlot> slots(n_threads);
 
-        parallel_for(lines.size(), n_threads, [&](size_t start, size_t end) {
+        parallel_for_indexed(lines.size(), n_threads, [&](size_t start, size_t end, size_t tid) {
+            LogStats& local = slots[tid].stats;
             for (size_t i = start; i < end; ++i) {
+                local.total_lines++;
                 if (auto entry = parse_log_line(lines[i])) {
-                    cs.add_entry(*entry, entry->bytes);
+                    local.parsed_ok++;
+                    accumulate(local, *entry);
                 } else {
-                    cs.add_error();
+                    local.parse_errors++;
                 }
             }
         });
 
-        auto result = cs.to_log_stats();
-        benchmark::DoNotOptimize(result);
+        LogStats global_stats;
+        for (auto& slot : slots) global_stats.merge(slot.stats);
+        benchmark::DoNotOptimize(global_stats);
     }
 }
-BENCHMARK(BM_ProcessFileConcurrentTBB)->Iterations(1)->UseRealTime();
+BENCHMARK(BM_ProcessFileChunked)->Iterations(1)->UseRealTime();
+
 // Кастомный main: извлекает --test_file=<path> из argv до передачи оставшихся
 // аргументов в Google Benchmark. Это позволяет запускать бенчмарк как:
 //   log_benchmark --test_file=data/access.log --benchmark_filter=BM_ProcessFile
