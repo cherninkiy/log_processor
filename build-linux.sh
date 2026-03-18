@@ -219,6 +219,12 @@ fi
 if grep -q Microsoft /proc/version 2>/dev/null; then
     echo -e "${YELLOW}⚠️  Running in WSL environment${NC}"
     WSL=1
+    # Strip Windows-mounted paths (/mnt/...) from PATH so CMake cannot accidentally
+    # pick up MSYS2/MinGW packages (e.g. TBB, Clang) instead of native Linux ones.
+    # Without this, find_package(TBB) finds /mnt/d/msys64/ucrt64/lib/cmake/TBB and
+    # its include dir gets prepended to gcc's search path, shadowing Linux headers.
+    export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/mnt/' | tr '\n' ':' | sed 's/:$//')
+    echo -e "${CYAN}   Windows /mnt/* paths removed from PATH${NC}"
 else
     WSL=0
 fi
@@ -314,7 +320,13 @@ fi
 # Clean build if requested
 if [ "$CLEAN_BUILD" = true ]; then
     echo -e "\n${YELLOW}🧹 Cleaning build directory...${NC}"
-    rm -rf build/linux
+    # На WSL некоторые файлы могут быть заблокированы Windows-процессами.
+    # Используем find -delete (удаляет содержимое без удаления самой директории),
+    # и не падаем из-за set -e если конкретный файл заблокирован.
+    if [ -d build/linux ]; then
+        find build/linux -mindepth 1 -delete 2>/dev/null || rm -rf build/linux 2>/dev/null || \
+            echo -e "  ${YELLOW}⚠️  Some files could not be removed (possibly locked by Windows) — continuing${NC}"
+    fi
 fi
 
 # Create build directory
@@ -342,6 +354,14 @@ CMAKE_ARGS=(
     "-DBUILD_BENCHMARKS=$BUILD_BENCHMARKS"
     "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
 )
+
+# В WSL cmake деривирует prefix-пути из PATH (берёт .../bin → ../lib/cmake/...),
+# поэтому /mnt/d/msys64/ucrt64/bin в PATH тянет MSYS2-пакеты вместо нативных.
+# CMAKE_IGNORE_PATH запрещает поиск в /mnt, TBB_DIR/TBB_ROOT явно сбрасываем.
+if [ "$WSL" -eq 1 ]; then
+    CMAKE_ARGS+=("-DCMAKE_IGNORE_PATH=/mnt")
+    CMAKE_ARGS+=("-DTBB_DIR=" "-DTBB_ROOT_DIR=" "-DTBB_ROOT=")
+fi
 
 # Add sanitizers if requested and Debug build
 if [ "$CONFIG" = "Debug" ]; then
