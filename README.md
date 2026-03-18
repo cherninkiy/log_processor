@@ -41,6 +41,10 @@ log_processor/
 │   │   ├── analyzer.h
 │   │   └── analyzer.cpp
 │   └── common/
+│       ├── stats.h           # LogStats — структура агрегированной статистики
+│       ├── stats.cpp
+│       ├── scheduler.h       # parallel_for / parallel_for_indexed (появляется в step2)
+│       ├── concurrent_stats.h # TBB concurrent_hash_map вариант (появляется в step3)
 │       ├── thread_pool.h     # Пул потоков (появляется в step4)
 │       └── timer.h           # RAII-таймер
 ├── tests/                    # Модульные тесты (GTest)
@@ -60,7 +64,9 @@ log_processor/
     ├── generate_logs.py      # Генератор синтетических логов заданного размера
     ├── run_benchmarks.sh     # Запуск бенчмарков в Linux/WSL, сохранение результатов
     ├── run_benchmarks.ps1    # Запуск бенчмарков в Windows
-    └── generate_report.py    # Построение отчёта по сохранённым результатам
+    ├── generate_report.py    # Построение отчёта по сохранённым результатам
+    ├── _parse_results.py     # Вспомогательный парсер всех benchmark.json
+    └── _check_latest.py      # Быстрая инспекция последнего benchmark.json
 ```
 
 ---
