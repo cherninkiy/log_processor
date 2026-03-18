@@ -78,7 +78,16 @@ find_package(Threads REQUIRED)
 # Опционально: TBB для параллельных алгоритмов
 find_package(TBB QUIET)
 if(TBB_FOUND)
-    message(STATUS "Intel TBB found - parallel algorithms will be available")
+    # В WSL cmake деривирует prefix-пути из PATH, поэтому может подхватить
+    # MSYS2/ucrt64 TBB по пути /mnt/... Этот TBB содержит Windows-только заголовки
+    # (_CRTIMP, _WIN32, io.h) и ломает компиляцию с Linux gcc.
+    if(LINUX AND TBB_DIR MATCHES "^/mnt/")
+        message(STATUS "Intel TBB skipped: detected Windows path (${TBB_DIR}) — not usable on Linux")
+        set(TBB_FOUND FALSE)
+        unset(TBB_DIR CACHE)
+    else()
+        message(STATUS "Intel TBB found - parallel algorithms will be available")
+    endif()
 else()
     message(STATUS "Intel TBB not found - using fallback implementations")
 endif()
