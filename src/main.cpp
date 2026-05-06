@@ -8,6 +8,7 @@
 #include "analyzer/analyzer.h"
 #include "common/scheduler.h"
 #include "common/stats.h"
+#include "common/thread_pool.h"
 #include "common/timer.h"
 
 // Слот для статистики одного потока, выровненный по границе кэш-линии (64 байта).
@@ -38,27 +39,31 @@ int main(int argc, char* argv[]) {
     const auto lines = LogReader::getLineViews(buf);
     const size_t total = lines.size();
 
-    // Шаг 2: параллельный парсинг и агрегация без мьютекса.
-    // Каждый поток обращается только к своему слоту — нет разделяемого состояния
-    // в горячем пути, нет необходимости в lock_guard или std::atomic.
+    // Шаг 2 (step4): параллельный парсинг через ThreadPool.
+    // Потоки не создаются заново — переиспользуются из пула.
+    // Каждый поток пишет в свой slot[tid] без мьютекса (shared-nothing).
     std::vector<ThreadSlot> slots(n_threads);
+    {
+        ThreadPool pool(n_threads);
 
-    parallel_for_indexed(total, n_threads, [&](size_t start, size_t end, size_t tid) {
-        LogStats& local = slots[tid].stats;
-        for (size_t i = start; i < end; ++i) {
-            local.total_lines++;
-            if (auto entry = parse_log_line(lines[i])) {
-                local.parsed_ok++;
-                accumulate(local, *entry);
-            } else {
-                local.parse_errors++;
+        // Используем parallel_for_pool — статическое разбиение через пул.
+        parallel_for_pool(pool, total, n_threads, [&](size_t start, size_t end, size_t tid) {
+            LogStats& local = slots[tid].stats;
+            for (size_t i = start; i < end; ++i) {
+                local.total_lines++;
+                if (auto entry = parse_log_line(lines[i])) {
+                    local.parsed_ok++;
+                    accumulate(local, *entry);
+                } else {
+                    local.parse_errors++;
+                }
             }
-        }
-        // В step2 здесь был: std::lock_guard<std::mutex> lock(stats_mutex); global_stats.merge(local);
-        // В step3 — никакой синхронизации: каждый слот принадлежит ровно одному потоку.
-    });
+        });
+        // pool.wait_all() вызывается внутри parallel_for_pool.
+        // При выходе из блока ~ThreadPool() join'ит потоки.
+    }
 
-    // Шаг 3: слияние выполняется главным потоком после завершения всех потоков.
+    // Шаг 3: слияние выполняется главным потоком после завершения всех задач.
     // N-1 операций merge без конкуренции вместо N последовательных lock+merge.
     LogStats global_stats;
     for (auto& slot : slots) {

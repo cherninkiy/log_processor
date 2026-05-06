@@ -43,7 +43,8 @@ log_processor/
 │   └── common/
 │       ├── stats.h           # LogStats — структура агрегированной статистики
 │       ├── stats.cpp
-│       ├── scheduler.h       # parallel_for / parallel_for_indexed
+│       ├── scheduler.h       # parallel_for / parallel_for_indexed / parallel_for_pool
+│       ├── thread_pool.h     # ThreadPool — постоянный пул потоков (step4+)
 │       ├── concurrent_stats.h # TBB concurrent_hash_map вариант (для сравнения)
 │       └── timer.h           # RAII-таймер
 ├── tests/                    # Модульные тесты (GTest)
@@ -53,7 +54,8 @@ log_processor/
 │   ├── test_reader.cpp
 │   ├── test_stats.cpp
 │   ├── test_threading.cpp    # Параллельная корректность (step2+)
-│   └── test_atomics.cpp      # thread-local слоты, false sharing, merge (step3+)
+│   ├── test_atomics.cpp      # thread-local слоты, false sharing, merge (step3+)
+│   └── test_threadpool.cpp   # ThreadPool и parallel_for_pool (step4+)
 ├── benchmarks/               # Бенчмарки (Google Benchmark)
 │   ├── CMakeLists.txt
 │   └── benchmark.cpp         # Измеряет парсинг, агрегацию, чтение, полный pipeline
@@ -190,7 +192,14 @@ Baseline на 1 ГБ (7.1М строк, Windows, однопоток): **13.5 с�
 > **WSL-примечание.** Файл на `/mnt/` проходит через WSL↔NTFS interop-слой. `readAllLines()` давал ~26.5 с реального времени при 5.1 с CPU-времени. Для честных Linux-цифр: `cp /mnt/d/.../access.log ~/access.log`.
 
 ### Шаг 4 — `step4-threadpool`
-Вместо создания N потоков под каждый файл — **постоянный пул потоков**. Чанки ставятся в очередь задач (`std::queue` + condvar или lock-free очередь). Потоки берут задачи по мере готовности. Снижаются накладные расходы на `thread::join`, улучшается балансировка при неравных чанках.
+Вместо создания N потоков под каждый файл — **постоянный пул потоков**. Чанки ставятся в очередь задач (`std::queue` + condvar). Потоки берут задачи по мере готовности. Снижаются накладные расходы на `thread::join`, улучшается балансировка при неравных чанках.
+
+Особенности реализации:
+- `common/thread_pool.h`: класс `ThreadPool` — header-only, постоянные рабочие потоки, шаблонный `enqueue()` с `std::future`, `enqueue_detach()` для void-задач, `wait_all()` через condition_variable + атомарный счётчик активных задач
+- `common/scheduler.h`: добавлен `parallel_for_pool<Worker>(pool, total, n_threads, worker)` — статическое разбиение через ThreadPool, интерфейс совместим с `parallel_for_indexed`
+- `main.cpp`: `parallel_for_indexed` заменён на `parallel_for_pool`, `ThreadPool` создаётся один раз на время обработки
+- `tests/test_threadpool.cpp`: 7 тестов — базовое выполнение, 1 поток, повторный enqueue, future-возврат, parallel_for_pool vs sequential (4/1/8 потоков)
+- `benchmarks/benchmark.cpp`: добавлен `BM_ProcessFileThreadPool`
 
 ### Шаг 5 — `step5-par-stl`
 Заменяем ручное управление потоками на `std::for_each(std::execution::par, chunks.begin(), chunks.end(), process)`. Код становится компактнее. Требует Intel TBB как бэкенд (или встроенной реализации в MSVC). Сравниваем с шагом 4 по производительности.

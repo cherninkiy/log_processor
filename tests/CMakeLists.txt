@@ -73,6 +73,7 @@ add_gtest(test_reader test_reader.cpp)
 add_gtest(test_stats test_stats.cpp)
 add_gtest(test_threading test_threading.cpp)
 add_gtest(test_atomics test_atomics.cpp)
+add_gtest(test_threadpool test_threadpool.cpp)
 
 # Если нужно больше тестов, добавляйте их так же
 # add_gtest(test_something test_something.cpp)

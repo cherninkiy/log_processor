@@ -13,6 +13,7 @@
 #include "analyzer/analyzer.h"
 #include "common/scheduler.h"
 #include "common/stats.h"
+#include "common/thread_pool.h"
 #ifdef HAVE_TBB
 #  include "common/concurrent_stats.h"
 #endif
@@ -277,6 +278,49 @@ static void BM_ProcessFileChunked(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_ProcessFileChunked)->Iterations(1)->UseRealTime();
+
+// -----------------------------------------------------------------------------
+// Бенчмарк: обработка через ThreadPool + chunked-reader (step4)
+// readRawBuffer()  — одно большое чтение
+// getLineViews()   — zero-copy сплит
+// parallel_for_pool — переиспользование потоков из пула, нет накладных расходов
+//                     на thread::join при каждом запуске
+// ThreadSlot+alignas(64) — false sharing устранён
+// -----------------------------------------------------------------------------
+static void BM_ProcessFileThreadPool(benchmark::State& state) {
+    const size_t n_threads = static_cast<size_t>(std::thread::hardware_concurrency());
+
+    struct alignas(64) ThreadSlot { LogStats stats; };
+    ThreadPool pool(n_threads);
+
+    for (auto _ : state) {
+        LogReader reader(g_test_file);
+        auto buf   = reader.readRawBuffer();
+        auto lines = LogReader::getLineViews(buf);
+
+        std::vector<ThreadSlot> slots(n_threads);
+
+        parallel_for_pool(pool, lines.size(), n_threads,
+            [&](size_t start, size_t end, size_t tid) {
+                LogStats& local = slots[tid].stats;
+                for (size_t i = start; i < end; ++i) {
+                    local.total_lines++;
+                    if (auto entry = parse_log_line(lines[i])) {
+                        local.parsed_ok++;
+                        accumulate(local, *entry);
+                    } else {
+                        local.parse_errors++;
+                    }
+                }
+            }
+        );
+
+        LogStats global_stats;
+        for (auto& slot : slots) global_stats.merge(slot.stats);
+        benchmark::DoNotOptimize(global_stats);
+    }
+}
+BENCHMARK(BM_ProcessFileThreadPool)->Iterations(1)->UseRealTime();
 
 // Кастомный main: извлекает --test_file=<path> из argv до передачи оставшихся
 // аргументов в Google Benchmark. Это позволяет запускать бенчмарк как:
